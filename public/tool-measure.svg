@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 430">
+ <defs>
+  <linearGradient id="y" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe34f"/><stop offset=".55" stop-color="#ffc400"/><stop offset="1" stop-color="#d79c00"/></linearGradient>
+  <filter id="s"><feDropShadow dx="0" dy="24" stdDeviation="20" flood-opacity=".55"/></filter>
+ </defs>
+ <g filter="url(#s)" transform="translate(175 30) rotate(6 140 180)">
+  <rect x="15" y="0" width="245" height="360" rx="58" fill="url(#y)"/>
+  <rect x="47" y="45" width="181" height="118" rx="20" fill="#111416"/>
+  <rect x="72" y="71" width="132" height="64" rx="8" fill="#7dff7b" opacity=".75"/>
+  <circle cx="138" cy="221" r="34" fill="#171a1c"/><circle cx="138" cy="221" r="14" fill="#ffc800"/>
+  <rect x="74" y="279" width="128" height="21" rx="10" fill="#202326"/>
+  <text x="76" y="336" fill="#111" font-size="34" font-family="Arial Black,Arial" font-style="italic">ZONA</text>
+ </g>
+</svg>

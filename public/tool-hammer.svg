@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 430">
+  <defs>
+    <linearGradient id="y" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe34f"/><stop offset=".6" stop-color="#ffc400"/><stop offset="1" stop-color="#d99e00"/></linearGradient>
+    <linearGradient id="b"><stop stop-color="#3a3f43"/><stop offset=".5" stop-color="#111416"/><stop offset="1" stop-color="#030405"/></linearGradient>
+    <filter id="s"><feDropShadow dx="0" dy="22" stdDeviation="20" flood-opacity=".55"/></filter>
+  </defs>
+  <g filter="url(#s)" transform="translate(45 55) rotate(-6 280 160)">
+    <path d="M65 125h105l28 22h294c25 0 45 20 45 45v37c0 25-20 45-45 45H195l-35-25H65z" fill="url(#y)"/>
+    <path d="M215 147h185c40 0 65 22 65 62 0 37-27 65-65 65H215z" fill="url(#b)"/>
+    <path d="M105 137H20l-45 29 45 25h85z" fill="#8f969b"/>
+    <path d="M-20 164h-72v11h72z" fill="#d3d7da"/>
+    <path d="M378 270h78l-23 110h-85z" fill="url(#y)"/>
+    <path d="M383 286h42l-12 71h-48z" fill="#16191b"/>
+    <path d="M322 380h145c18 0 31 15 31 32H291c0-17 13-32 31-32z" fill="#151719"/>
+    <path d="M115 258h44l-24 97H75z" fill="#202326"/>
+    <text x="228" y="218" fill="#ffc800" font-size="36" font-family="Arial Black,Arial" font-style="italic">ZONA PRO</text>
+  </g>
+</svg>

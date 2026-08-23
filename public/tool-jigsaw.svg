@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 430">
+ <defs>
+  <linearGradient id="y" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe34f"/><stop offset=".55" stop-color="#ffc400"/><stop offset="1" stop-color="#dba000"/></linearGradient>
+  <linearGradient id="b"><stop stop-color="#3c4145"/><stop offset=".5" stop-color="#111416"/><stop offset="1" stop-color="#040505"/></linearGradient>
+  <filter id="s"><feDropShadow dx="0" dy="24" stdDeviation="20" flood-opacity=".55"/></filter>
+ </defs>
+ <g filter="url(#s)" transform="translate(105 35)">
+  <path d="M95 120c0-58 47-105 105-105h92c69 0 125 56 125 125v160H95z" fill="url(#y)"/>
+  <path d="M146 111c0-31 25-56 56-56h68c38 0 69 31 69 69v64H146z" fill="#111416"/>
+  <path d="M123 211h270v92H123z" fill="url(#b)"/>
+  <path d="M70 302h368l-22 46H91z" fill="#90979b"/>
+  <path d="M247 296h13v115h-13z" fill="#e2e4e5"/>
+  <text x="160" y="260" fill="#ffc800" font-size="38" font-family="Arial Black,Arial" font-style="italic">ZONA</text>
+ </g>
+</svg>

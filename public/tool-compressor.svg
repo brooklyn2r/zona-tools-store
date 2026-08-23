@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 430">
+ <defs>
+  <linearGradient id="y" x1="0" x2="1"><stop stop-color="#ffe14b"/><stop offset=".55" stop-color="#ffc500"/><stop offset="1" stop-color="#d99f00"/></linearGradient>
+  <linearGradient id="b"><stop stop-color="#3b4044"/><stop offset=".5" stop-color="#131618"/><stop offset="1" stop-color="#040505"/></linearGradient>
+  <filter id="s"><feDropShadow dx="0" dy="24" stdDeviation="20" flood-opacity=".55"/></filter>
+ </defs>
+ <g filter="url(#s)" transform="translate(50 80)">
+  <rect x="52" y="160" width="445" height="130" rx="65" fill="url(#y)"/>
+  <path d="M141 153v-52c0-40 32-72 72-72h112c41 0 74 33 74 74v50z" fill="url(#b)"/>
+  <rect x="190" y="60" width="165" height="80" rx="20" fill="#25292c"/>
+  <circle cx="124" cy="302" r="39" fill="#17191b"/><circle cx="431" cy="302" r="39" fill="#17191b"/>
+  <circle cx="109" cy="203" r="27" fill="#fafafa"/><circle cx="173" cy="203" r="27" fill="#fafafa"/>
+  <circle cx="109" cy="203" r="14" fill="#222"/><circle cx="173" cy="203" r="14" fill="#222"/>
+  <text x="249" y="235" fill="#111" font-size="42" font-family="Arial Black,Arial" font-style="italic">ZONA</text>
+ </g>
+</svg>
