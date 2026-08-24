@@ -490,3 +490,26 @@ body{font-size:16px}
 .sync-badge.manual{background:rgba(125,218,142,.08);color:#7dda8e;border:1px solid rgba(125,218,142,.15)}
 .sync-meta-box{margin-top:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.025);border-radius:12px;padding:10px;display:grid;gap:7px}
 .sync-meta-box>div{display:flex;justify-content:space-between;gap:12px;font-size:9px}.sync-meta-box span{color:#7f898e}.sync-meta-box b{color:#ffd000}.sync-toggle{display:flex!important;flex-direction:row!important;align-items:center;gap:7px!important;margin:4px 0 0!important}.sync-toggle input{width:auto!important}
+
+
+/* Admin cursor fix */
+.admin-login .zona-arrow-cursor,
+.admin-shell .zona-arrow-cursor{
+  z-index:2147483647!important;
+}
+
+.admin-login,
+.admin-shell,
+.product-form,
+.modal-bg{
+  cursor:none;
+}
+
+@media (pointer:coarse), (max-width:760px){
+  .admin-login,
+  .admin-shell,
+  .product-form,
+  .modal-bg{
+    cursor:auto!important;
+  }
+}
