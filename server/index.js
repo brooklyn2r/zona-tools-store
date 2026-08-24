@@ -329,7 +329,7 @@ app.post('/api/digit/sync', requireDigitApiKey, async (req, res) => {
               stock=$6,
               unit=$7,
               spec=$8,
-              specs=$9,
+              specs=$9::jsonb,
               is_active=$10,
               sync_source='digit',
               last_synced_at=now(),
@@ -337,7 +337,7 @@ app.post('/api/digit/sync', requireDigitApiKey, async (req, res) => {
             where digit_product_id=$11
           `, [
             p.title, p.brand, p.category, p.price, p.old_price, p.stock,
-            p.unit, p.spec, p.specs, p.is_active, p.digit_product_id
+            p.unit, p.spec, JSON.stringify(p.specs || {}), p.is_active, p.digit_product_id
           ]);
           updated++;
         } else {
@@ -346,10 +346,10 @@ app.post('/api/digit/sync', requireDigitApiKey, async (req, res) => {
           await client.query(`
             insert into products
             (title,slug,category,brand,spec,price,old_price,badge,stock,description,image_url,rating,reviews,is_active,is_featured,specs,images,digit_product_id,sync_source,last_synced_at,sync_enabled,unit)
-            values ($1,$2,$3,$4,$5,$6,$7,'',$8,'','',5,0,$9,false,$10,'[]'::jsonb,$11,'digit',now(),true,$12)
+            values ($1,$2,$3,$4,$5,$6,$7,'',$8,'','',5,0,$9,false,$10::jsonb,'[]'::jsonb,$11,'digit',now(),true,$12)
           `, [
             p.title, slug, p.category, p.brand, p.spec, p.price, p.old_price,
-            p.stock, p.is_active, p.specs, p.digit_product_id, p.unit
+            p.stock, p.is_active, JSON.stringify(p.specs || {}), p.digit_product_id, p.unit
           ]);
           created++;
         }
@@ -556,7 +556,7 @@ app.post('/api/admin/products', requireAdmin, async (req, res) => {
     const { rows } = await query(`
       insert into products
       (title, slug, category, brand, spec, price, old_price, badge, stock, description, image_url, rating, reviews, is_active, is_featured, specs, images)
-      values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+      values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16::jsonb,$17::jsonb)
       returning *
     `, [
       p.title, p.slug, p.category, p.brand || 'ZONA', p.spec || '',
@@ -564,8 +564,8 @@ app.post('/api/admin/products', requireAdmin, async (req, res) => {
       Number(p.stock || 0), p.description || '', p.image_url || '',
       Number(p.rating || 5), Number(p.reviews || 0),
       Boolean(p.is_active), Boolean(p.is_featured),
-      p.specs && typeof p.specs === 'object' ? p.specs : {},
-      Array.isArray(p.images) ? p.images : []
+      JSON.stringify(p.specs && typeof p.specs === 'object' && !Array.isArray(p.specs) ? p.specs : {}),
+      JSON.stringify(Array.isArray(p.images) ? p.images.filter(Boolean) : [])
     ]);
     res.status(201).json(rows[0]);
   } catch (e) {
@@ -582,8 +582,9 @@ app.put('/api/admin/products/:id', requireAdmin, async (req, res) => {
         title=$1, slug=$2, category=$3, brand=$4, spec=$5,
         price=$6, old_price=$7, badge=$8, stock=$9, description=$10,
         image_url=$11, rating=$12, reviews=$13, is_active=$14,
-        is_featured=$15, specs=$16, images=$17, updated_at=now()
-      where id=$18
+        is_featured=$15, specs=$16::jsonb, images=$17::jsonb,
+        sync_enabled=coalesce($18,sync_enabled), updated_at=now()
+      where id=$19
       returning *
     `, [
       p.title, p.slug, p.category, p.brand || 'ZONA', p.spec || '',
@@ -591,8 +592,9 @@ app.put('/api/admin/products/:id', requireAdmin, async (req, res) => {
       Number(p.stock || 0), p.description || '', p.image_url || '',
       Number(p.rating || 5), Number(p.reviews || 0),
       Boolean(p.is_active), Boolean(p.is_featured),
-      p.specs && typeof p.specs === 'object' ? p.specs : {},
-      Array.isArray(p.images) ? p.images : [],
+      JSON.stringify(p.specs && typeof p.specs === 'object' && !Array.isArray(p.specs) ? p.specs : {}),
+      JSON.stringify(Array.isArray(p.images) ? p.images.filter(Boolean) : []),
+      typeof p.sync_enabled === 'boolean' ? p.sync_enabled : null,
       id
     ]);
 
