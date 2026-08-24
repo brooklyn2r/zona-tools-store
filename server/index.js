@@ -125,6 +125,48 @@ function requireDigitApiKey(req, res, next) {
   next();
 }
 
+
+function normalizeJsonObject(value) {
+  if (value == null || value === '') return {};
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function normalizeJsonArray(value) {
+  if (value == null || value === '') return [];
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed.filter(Boolean).map(String) : [];
+    } catch {
+      // A single URL string is accepted as one image.
+      return /^https?:\/\//i.test(value.trim()) ? [value.trim()] : [];
+    }
+  }
+  return Array.isArray(value) ? value.filter(Boolean).map(String) : [];
+}
+
+function productAdminJsonPayload(p) {
+  const specsObj = normalizeJsonObject(p?.specs);
+  const imagesArr = normalizeJsonArray(p?.images);
+
+  const specsJson = JSON.stringify(specsObj);
+  const imagesJson = JSON.stringify(imagesArr);
+
+  // Fail here with a clear message rather than letting PostgreSQL emit a vague error.
+  try { JSON.parse(specsJson); } catch { throw new Error('Поле specs содержит некорректный JSON'); }
+  try { JSON.parse(imagesJson); } catch { throw new Error('Поле images содержит некорректный JSON'); }
+
+  return { specsJson, imagesJson };
+}
+
 function normalizeDigitProduct(raw) {
   const digitId = String(raw?.digit_product_id ?? raw?.id ?? '').trim();
   if (!digitId) throw new Error('У товара отсутствует digit_product_id');
@@ -482,7 +524,7 @@ app.get('/api/digit/logs', requireDigitApiKey, async (req, res) => {
 app.get('/api/health', async (_, res) => {
   try {
     await query('select 1');
-    res.json({ ok: true, database: true });
+    res.json({ ok: true, database: true, build: 's3-json-hard-fix-2026-08-24' });
   } catch (e) {
     res.status(500).json({ ok: false, database: false, error: e.message });
   }
@@ -552,48 +594,103 @@ app.post('/api/admin/upload', requireAdmin, upload.single('image'), async (req, 
 
 app.post('/api/admin/products', requireAdmin, async (req, res) => {
   try {
-    const p = req.body;
+    const p = req.body || {};
+    const { specsJson, imagesJson } = productAdminJsonPayload(p);
+
     const { rows } = await query(`
       insert into products
       (title, slug, category, brand, spec, price, old_price, badge, stock, description, image_url, rating, reviews, is_active, is_featured, specs, images)
-      values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16::jsonb,$17::jsonb)
+      values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,CAST($16 AS jsonb),CAST($17 AS jsonb))
       returning *
     `, [
-      p.title, p.slug, p.category, p.brand || 'ZONA', p.spec || '',
-      Number(p.price || 0), Number(p.old_price || 0), p.badge || '',
-      Number(p.stock || 0), p.description || '', p.image_url || '',
-      Number(p.rating || 5), Number(p.reviews || 0),
-      Boolean(p.is_active), Boolean(p.is_featured),
-      JSON.stringify(p.specs && typeof p.specs === 'object' && !Array.isArray(p.specs) ? p.specs : {}),
-      JSON.stringify(Array.isArray(p.images) ? p.images.filter(Boolean) : [])
+      String(p.title || '').trim(),
+      String(p.slug || '').trim(),
+      String(p.category || '').trim(),
+      String(p.brand || 'ZONA').trim(),
+      String(p.spec || ''),
+      Number(p.price || 0),
+      Number(p.old_price || 0),
+      String(p.badge || ''),
+      Number(p.stock || 0),
+      String(p.description || ''),
+      String(p.image_url || ''),
+      Number(p.rating || 5),
+      Number(p.reviews || 0),
+      Boolean(p.is_active),
+      Boolean(p.is_featured),
+      specsJson,
+      imagesJson
     ]);
+
     res.status(201).json(rows[0]);
   } catch (e) {
-    res.status(400).json({ error: e.message });
+    console.error('[ADMIN PRODUCT CREATE]', {
+      message: e?.message,
+      detail: e?.detail,
+      where: e?.where,
+      code: e?.code,
+      specsType: typeof req.body?.specs,
+      imagesType: typeof req.body?.images,
+      imagesIsArray: Array.isArray(req.body?.images)
+    });
+    res.status(400).json({
+      error: e?.message || 'Не удалось создать товар',
+      code: e?.code || null,
+      detail: e?.detail || null,
+      build: 's3-json-hard-fix-2026-08-24'
+    });
   }
 });
 
 app.put('/api/admin/products/:id', requireAdmin, async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const p = req.body;
+    if (!Number.isFinite(id)) return res.status(400).json({ error: 'Некорректный ID товара' });
+
+    const p = req.body || {};
+    const { specsJson, imagesJson } = productAdminJsonPayload(p);
+
     const { rows } = await query(`
       update products set
-        title=$1, slug=$2, category=$3, brand=$4, spec=$5,
-        price=$6, old_price=$7, badge=$8, stock=$9, description=$10,
-        image_url=$11, rating=$12, reviews=$13, is_active=$14,
-        is_featured=$15, specs=$16::jsonb, images=$17::jsonb,
-        sync_enabled=coalesce($18,sync_enabled), updated_at=now()
+        title=$1,
+        slug=$2,
+        category=$3,
+        brand=$4,
+        spec=$5,
+        price=$6,
+        old_price=$7,
+        badge=$8,
+        stock=$9,
+        description=$10,
+        image_url=$11,
+        rating=$12,
+        reviews=$13,
+        is_active=$14,
+        is_featured=$15,
+        specs=CAST($16 AS jsonb),
+        images=CAST($17 AS jsonb),
+        sync_enabled=coalesce($18,sync_enabled),
+        updated_at=now()
       where id=$19
       returning *
     `, [
-      p.title, p.slug, p.category, p.brand || 'ZONA', p.spec || '',
-      Number(p.price || 0), Number(p.old_price || 0), p.badge || '',
-      Number(p.stock || 0), p.description || '', p.image_url || '',
-      Number(p.rating || 5), Number(p.reviews || 0),
-      Boolean(p.is_active), Boolean(p.is_featured),
-      JSON.stringify(p.specs && typeof p.specs === 'object' && !Array.isArray(p.specs) ? p.specs : {}),
-      JSON.stringify(Array.isArray(p.images) ? p.images.filter(Boolean) : []),
+      String(p.title || '').trim(),
+      String(p.slug || '').trim(),
+      String(p.category || '').trim(),
+      String(p.brand || 'ZONA').trim(),
+      String(p.spec || ''),
+      Number(p.price || 0),
+      Number(p.old_price || 0),
+      String(p.badge || ''),
+      Number(p.stock || 0),
+      String(p.description || ''),
+      String(p.image_url || ''),
+      Number(p.rating || 5),
+      Number(p.reviews || 0),
+      Boolean(p.is_active),
+      Boolean(p.is_featured),
+      specsJson,
+      imagesJson,
       typeof p.sync_enabled === 'boolean' ? p.sync_enabled : null,
       id
     ]);
@@ -601,7 +698,24 @@ app.put('/api/admin/products/:id', requireAdmin, async (req, res) => {
     if (!rows.length) return res.status(404).json({ error: 'Товар не найден' });
     res.json(rows[0]);
   } catch (e) {
-    res.status(400).json({ error: e.message });
+    console.error('[ADMIN PRODUCT UPDATE]', {
+      message: e?.message,
+      detail: e?.detail,
+      where: e?.where,
+      code: e?.code,
+      productId: req.params.id,
+      specsType: typeof req.body?.specs,
+      imagesType: typeof req.body?.images,
+      imagesIsArray: Array.isArray(req.body?.images),
+      imageCount: Array.isArray(req.body?.images) ? req.body.images.length : null
+    });
+
+    res.status(400).json({
+      error: e?.message || 'Не удалось сохранить товар',
+      code: e?.code || null,
+      detail: e?.detail || null,
+      build: 's3-json-hard-fix-2026-08-24'
+    });
   }
 });
 
