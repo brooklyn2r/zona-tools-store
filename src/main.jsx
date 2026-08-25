@@ -293,11 +293,6 @@ function HomePage({products,categories,setPage,setQuery,open,add,favs,toggleFav,
       </div>
     </section>
 
-    <section className="home-contact-head">
-      <div className="home-section-head">
-        <div><span>КОНТАКТЫ</span><h2>Магазин ZONA в Хасавюрте</h2></div>
-      </div>
-    </section>
     <StoreContactsBlock/>
 
     <section className="commerce-benefits glass">
