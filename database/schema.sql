@@ -3,7 +3,11 @@ create table if not exists categories (
   name text not null unique,
   slug text not null unique,
   sort_order integer not null default 0,
-  created_at timestamptz not null default now()
+  image_url text,
+  sync_source text not null default 'digit',
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
 create table if not exists products (

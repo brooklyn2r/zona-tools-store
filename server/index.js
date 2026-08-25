@@ -79,6 +79,16 @@ async function ensureProductSpecsSchema() {
 }
 
 
+async function ensureCategorySchema() {
+  await query(`
+    alter table categories add column if not exists image_url text;
+    alter table categories add column if not exists sync_source text not null default 'digit';
+    alter table categories add column if not exists is_active boolean not null default true;
+    alter table categories add column if not exists updated_at timestamptz not null default now();
+    create index if not exists idx_categories_active_sort on categories(is_active, sort_order, name);
+  `);
+}
+
 async function ensureDigitSyncSchema() {
   await query(`
     alter table products add column if not exists digit_product_id text;
@@ -190,7 +200,13 @@ async function ensureDigitCategory(client, categoryName) {
     `select id from categories where lower(name)=lower($1) limit 1`,
     [name]
   );
-  if (existing.rows.length) return existing.rows[0];
+  if (existing.rows.length) {
+    await client.query(
+      `update categories set is_active=true,sync_source='digit',updated_at=now() where id=$1`,
+      [existing.rows[0].id]
+    );
+    return existing.rows[0];
+  }
 
   const maxResult = await client.query(
     `select coalesce(max(sort_order),0)::int as max_sort from categories`
@@ -214,9 +230,10 @@ async function ensureDigitCategory(client, categoryName) {
   }
 
   const { rows } = await client.query(
-    `insert into categories(name,slug,sort_order)
-     values($1,$2,$3)
-     on conflict(name) do update set name=excluded.name
+    `insert into categories(name,slug,sort_order,sync_source,is_active)
+     values($1,$2,$3,'digit',true)
+     on conflict(name) do update
+       set is_active=true,sync_source='digit',updated_at=now()
      returning id,name,slug,sort_order`,
     [name, slug, nextSort]
   );
@@ -326,6 +343,7 @@ app.post('/api/orders', async (req, res) => {
       const qty = Math.max(1, Math.min(99, Number(raw.quantity) || 1));
       const p = byId.get(id);
       if (!p || !p.is_active) return res.status(400).json({ error: 'Один из товаров больше недоступен' });
+      if (Number(p.stock) <= 0) return res.status(400).json({ error: `Товара «${p.title}» нет в наличии` });
       if (Number(p.stock) < qty) return res.status(400).json({ error: `Недостаточно товара «${p.title}». В наличии: ${p.stock}` });
       normalized.push({ id, title:p.title, price:Number(p.price), qty });
     }
@@ -492,6 +510,18 @@ app.post('/api/digit/sync', requireDigitApiKey, async (req, res) => {
 
     // A true full sync is the only operation allowed to deactivate missing DIGIT products.
     if (fullSync) {
+      const receivedCategories=[...new Set(rawProducts.map(raw=>String(raw?.category||'').trim()).filter(Boolean))];
+      if(receivedCategories.length){
+        await client.query(`
+          update categories
+          set is_active=false,updated_at=now()
+          where sync_source='digit' and not (name = any($1::text[]))
+        `,[receivedCategories]);
+        for(const categoryName of receivedCategories){
+          await ensureDigitCategory(client,categoryName);
+        }
+      }
+
       if (seenIds.length) {
         const result = await client.query(`
           update products
@@ -631,7 +661,12 @@ app.get('/api/products', async (req, res) => {
 
 app.get('/api/categories', async (_, res) => {
   try {
-    const { rows } = await query(`select * from categories order by sort_order, name`);
+    const { rows } = await query(`
+      select id,name,slug,sort_order,image_url,sync_source,is_active,updated_at
+      from categories
+      where is_active=true
+      order by sort_order, name
+    `);
     res.json(rows);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -675,6 +710,39 @@ app.post('/api/admin/upload', requireAdmin, upload.single('image'), async (req, 
     res.json({ url: `${base}/uploads/${req.file.filename}`, storage: 'local' });
   } catch (e) {
     res.status(400).json({ error: e.message });
+  }
+});
+
+app.get('/api/admin/categories', requireAdmin, async (_, res) => {
+  try {
+    const { rows } = await query(`
+      select id,name,slug,sort_order,image_url,sync_source,is_active,updated_at
+      from categories
+      order by is_active desc, sort_order, name
+    `);
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.patch('/api/admin/categories/:id', requireAdmin, async (req, res) => {
+  try {
+    const id=Number(req.params.id);
+    if(!Number.isFinite(id)) return res.status(400).json({error:'Некорректный ID категории'});
+    const imageUrl=String(req.body?.image_url||'').trim();
+    const sortOrder=Number(req.body?.sort_order??0);
+    const isActive=req.body?.is_active!==false;
+    const { rows }=await query(`
+      update categories
+      set image_url=$1,sort_order=$2,is_active=$3,updated_at=now()
+      where id=$4
+      returning id,name,slug,sort_order,image_url,sync_source,is_active,updated_at
+    `,[imageUrl||null,Number.isFinite(sortOrder)?sortOrder:0,isActive,id]);
+    if(!rows.length) return res.status(404).json({error:'Категория не найдена'});
+    res.json(rows[0]);
+  } catch(e) {
+    res.status(500).json({error:e.message});
   }
 });
 
@@ -862,6 +930,7 @@ ensureBaseSchema()
     ensureOrderSchema(),
     ensureProductSpecsSchema(),
     ensureProductImagesSchema(),
+    ensureCategorySchema(),
     ensureDigitSyncSchema()
   ]))
   .then(() => ensureInitialAdmin())

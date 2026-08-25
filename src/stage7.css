@@ -807,3 +807,204 @@ body{font-size:16px}
   .commerce-product h3{font-size:11px!important}.commerce-price strong{font-size:20px!important}.commerce-card-buttons .primary{font-size:10px!important}
   .hero-content h1{font-size:28px!important}.hero-content p{font-size:13px!important}.commerce-hero-main{height:420px!important;min-height:420px!important}
 }
+
+/* =========================================================
+   ZONA v0.18 — MOBILE HERO / CHECKOUT / ADMIN FIXES
+   ========================================================= */
+@media screen and (max-width: 767px){
+  /* HERO: normal document flow, artwork can never overlap text */
+  .commerce-hero-main{
+    display:flex!important;
+    flex-direction:column!important;
+    height:auto!important;
+    min-height:0!important;
+    padding:20px 18px 16px!important;
+    gap:10px!important;
+  }
+  .hero-content{
+    position:relative!important;
+    z-index:3!important;
+    width:100%!important;
+    max-width:100%!important;
+    padding:0!important;
+  }
+  .hero-content h1{
+    max-width:none!important;
+    font-size:30px!important;
+    line-height:1.07!important;
+    margin:12px 0 13px!important;
+  }
+  .hero-content p{
+    max-width:100%!important;
+    font-size:13px!important;
+    line-height:1.45!important;
+    margin-bottom:16px!important;
+  }
+  .hero-trust{margin-top:14px!important}
+  .hero-tool-art{
+    position:relative!important;
+    inset:auto!important;
+    width:100%!important;
+    height:145px!important;
+    min-height:145px!important;
+    margin:0!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    overflow:visible!important;
+  }
+  .hero-tool-art>img{
+    width:auto!important;
+    max-width:225px!important;
+    height:125px!important;
+    object-fit:contain!important;
+    transform:rotate(-5deg)!important;
+  }
+  .hero-circle{width:170px!important;height:170px!important}
+  .hero-float{font-size:9px!important;padding:6px 8px!important}
+  .hero-float.h1{right:10%!important;top:9%!important;left:auto!important;bottom:auto!important}
+  .hero-float.h2{right:13%!important;bottom:12%!important;left:auto!important;top:auto!important}
+  .hero-float.h3{left:12%!important;bottom:8%!important;right:auto!important;top:auto!important}
+
+  /* CHECKOUT: every step uses the whole phone width */
+  .checkout-page{width:100%!important;max-width:100%!important;padding-left:0!important;padding-right:0!important}
+  .checkout-layout,.checkout-fields{width:100%!important;max-width:100%!important;min-width:0!important}
+  .checkout-section{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    padding:16px 14px!important;
+    border-radius:18px!important;
+  }
+  .checkout-step{
+    display:inline-grid!important;
+    width:34px!important;
+    height:34px!important;
+    margin:0 0 10px!important;
+    vertical-align:middle!important;
+  }
+  .checkout-section-content{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  .checkout-section-content h2{font-size:21px!important;line-height:1.15!important;margin:0 0 4px!important}
+  .checkout-section-content>p{font-size:12px!important;margin:0 0 14px!important}
+  .checkout-input-grid,
+  .delivery-choice-grid,
+  .choice-cards.payment-cards{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    width:100%!important;
+    max-width:100%!important;
+    gap:9px!important;
+  }
+  .checkout-input-grid label,
+  .delivery-choice-grid label,
+  .choice-cards.payment-cards label,
+  .checkout-address,
+  .checkout-comment{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin-left:0!important;
+    margin-right:0!important;
+  }
+  .delivery-choice-grid label,
+  .choice-cards.payment-cards label{
+    min-height:0!important;
+    padding:14px!important;
+    border-radius:15px!important;
+  }
+  .delivery-choice-grid b,.choice-cards.payment-cards b{font-size:14px!important}
+  .delivery-choice-grid small,.choice-cards.payment-cards small{font-size:11px!important;line-height:1.35!important}
+  .delivery-choice-grid em{font-size:10px!important}
+  .checkout-section input{height:48px!important;font-size:14px!important}
+  .checkout-section textarea{height:110px!important;font-size:14px!important}
+  .checkout-summary{width:100%!important;max-width:100%!important}
+
+  /* MOBILE ADMIN: visible return-to-site action */
+  .admin-side .side-bottom{
+    display:flex!important;
+    align-items:center!important;
+    gap:5px!important;
+    margin:0!important;
+  }
+  .admin-side .admin-back-site,
+  .admin-side .admin-logout{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:5px!important;
+    height:34px!important;
+    width:auto!important;
+    min-width:34px!important;
+    padding:0 8px!important;
+    border-radius:9px!important;
+    font-size:8px!important;
+  }
+  .admin-side .admin-back-site{
+    color:#ffd000!important;
+    border:1px solid rgba(255,208,0,.25)!important;
+    background:rgba(255,208,0,.06)!important;
+  }
+  .admin-side .admin-back-site svg,
+  .admin-side .admin-logout svg{width:14px!important;height:14px!important}
+  .admin-side .admin-back-site span,
+  .admin-side .admin-logout span{display:inline!important;font-size:8px!important}
+}
+
+@media screen and (max-width:390px){
+  .commerce-hero-main{height:auto!important;min-height:0!important;padding:18px 15px 14px!important}
+  .hero-content h1{font-size:27px!important}
+  .hero-tool-art{height:132px!important;min-height:132px!important}
+  .hero-tool-art>img{max-width:205px!important;height:114px!important}
+  .checkout-section{padding:14px 12px!important}
+  .admin-side .admin-back-site span,
+  .admin-side .admin-logout span{display:none!important}
+  .admin-side .admin-back-site,
+  .admin-side .admin-logout{width:34px!important;padding:0!important}
+}
+
+
+/* v0.19 — stock availability */
+.product-stock.out-of-stock,
+.purchase-stock.out-of-stock{
+  color:#ff7373!important;
+  font-weight:800!important;
+}
+.disabled-buy,
+button.disabled-buy,
+button:disabled.disabled-buy{
+  background:rgba(255,255,255,.06)!important;
+  color:#7d8589!important;
+  border:1px solid rgba(255,255,255,.08)!important;
+  box-shadow:none!important;
+  cursor:not-allowed!important;
+  filter:none!important;
+}
+.disabled-buy svg{opacity:.45}
+.cart-out-stock{
+  display:block;
+  margin-top:3px;
+  color:#ff7373;
+  font-size:9px;
+  font-style:normal;
+  font-weight:800;
+}
+.qty button:disabled{
+  opacity:.35;
+  cursor:not-allowed;
+}
+.cart-checkout:disabled,
+.checkout-submit:disabled{
+  opacity:.45!important;
+  cursor:not-allowed!important;
+  box-shadow:none!important;
+}
+
+/* v0.20 category administration */
+.admin-categories-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.admin-category-card{border-radius:16px;padding:12px;display:grid;grid-template-columns:82px 1fr 38px;gap:10px;align-items:center}.admin-category-card.inactive{opacity:.5}.admin-category-image{height:72px;border-radius:11px;background:rgba(255,255,255,.035);display:grid;place-items:center;overflow:hidden}.admin-category-image img{width:100%;height:100%;object-fit:contain;padding:6px}.admin-category-info{display:flex;flex-direction:column;gap:5px;min-width:0}.admin-category-info b{font-size:13px}.admin-category-info small{font-size:9px;color:#849096}.cat-status{font-size:9px;color:#ff8585}.cat-status.on{color:#79df91}.category-form{width:min(520px,calc(100% - 20px));max-height:92vh;overflow:auto;padding:20px;border-radius:20px}.category-source-note{font-size:11px;color:#929ca1;line-height:1.45}.category-preview{height:130px;border:1px solid rgba(255,255,255,.08);border-radius:14px;display:flex;align-items:center;gap:18px;padding:12px;margin:12px 0}.category-preview img{width:120px;height:100px;object-fit:contain}.category-preview b{font-size:18px}.category-form label{display:flex;flex-direction:column;gap:6px;margin-top:10px;font-size:10px}.category-active{flex-direction:row!important;align-items:center!important}@media(max-width:760px){.admin-categories-grid{grid-template-columns:1fr!important}.admin-category-card{grid-template-columns:68px 1fr 34px!important;padding:9px!important}.admin-category-image{height:58px!important}.category-form{padding:14px!important}}
