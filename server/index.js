@@ -167,6 +167,62 @@ function productAdminJsonPayload(p) {
   return { specsJson, imagesJson };
 }
 
+
+function categorySlug(name) {
+  const source = String(name || '').trim().toLowerCase();
+  const translit = {
+    'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'e','ж':'zh','з':'z','и':'i','й':'y',
+    'к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f',
+    'х':'h','ц':'c','ч':'ch','ш':'sh','щ':'sch','ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya'
+  };
+  return source
+    .split('')
+    .map(ch => translit[ch] ?? ch)
+    .join('')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 90) || `category-${Date.now()}`;
+}
+
+async function ensureDigitCategory(client, categoryName) {
+  const name = String(categoryName || '').trim() || 'Без категории';
+  const existing = await client.query(
+    `select id from categories where lower(name)=lower($1) limit 1`,
+    [name]
+  );
+  if (existing.rows.length) return existing.rows[0];
+
+  const maxResult = await client.query(
+    `select coalesce(max(sort_order),0)::int as max_sort from categories`
+  );
+  const nextSort = Number(maxResult.rows[0]?.max_sort || 0) + 10;
+  const baseSlug = categorySlug(name);
+
+  // Avoid collisions when different names transliterate to the same slug.
+  let slug = baseSlug;
+  let suffix = 2;
+  while (true) {
+    const collision = await client.query(
+      `select id,name from categories where slug=$1 limit 1`,
+      [slug]
+    );
+    if (!collision.rows.length) break;
+    if (String(collision.rows[0].name).toLowerCase() === name.toLowerCase()) {
+      return collision.rows[0];
+    }
+    slug = `${baseSlug}-${suffix++}`;
+  }
+
+  const { rows } = await client.query(
+    `insert into categories(name,slug,sort_order)
+     values($1,$2,$3)
+     on conflict(name) do update set name=excluded.name
+     returning id,name,slug,sort_order`,
+    [name, slug, nextSort]
+  );
+  return rows[0];
+}
+
 function normalizeDigitProduct(raw) {
   const digitId = String(raw?.digit_product_id ?? raw?.id ?? '').trim();
   if (!digitId) throw new Error('У товара отсутствует digit_product_id');
@@ -198,6 +254,15 @@ function normalizeDigitProduct(raw) {
     is_active: raw?.is_active === false ? false : true
   };
 }
+
+const DELIVERY_METHODS = {
+  pickup: 'Самовывоз из магазина',
+  cdek: 'СДЭК',
+  russian_post: 'Почта России',
+  local_courier: 'Доставка по Хасавюрту',
+  transport_company: 'Транспортная компания / другой способ'
+};
+const ORDER_STATUSES = new Set(['new','confirmed','assembling','shipped','completed','cancelled']);
 
 async function ensureOrderSchema() {
   await query(`
@@ -238,69 +303,86 @@ app.post('/api/orders', async (req, res) => {
     const items = Array.isArray(body.items) ? body.items : [];
     const name = String(body.customer_name || '').trim();
     const phone = String(body.customer_phone || '').trim();
-    const deliveryType = body.delivery_type === 'delivery' ? 'delivery' : 'pickup';
+    const email = String(body.customer_email || '').trim();
+    const deliveryType = String(body.delivery_type || 'pickup');
     const paymentType = ['cash','transfer'].includes(body.payment_type) ? body.payment_type : 'cash';
     const address = String(body.delivery_address || '').trim();
+    const comment = String(body.comment || '').trim();
 
     if (name.length < 2) return res.status(400).json({ error: 'Укажите имя покупателя' });
     if (phone.replace(/\D/g,'').length < 10) return res.status(400).json({ error: 'Укажите корректный номер телефона' });
     if (!items.length) return res.status(400).json({ error: 'Корзина пуста' });
-    if (deliveryType === 'delivery' && address.length < 5) return res.status(400).json({ error: 'Укажите адрес доставки' });
+    if (!DELIVERY_METHODS[deliveryType]) return res.status(400).json({ error: 'Выберите способ получения' });
+    if (deliveryType !== 'pickup' && address.length < 3) return res.status(400).json({ error: 'Укажите адрес, пункт выдачи или данные доставки' });
 
     const ids = [...new Set(items.map(x => Number(x.product_id)).filter(Number.isFinite))];
     const { rows: products } = await client.query(
-      `select id,title,price,stock,is_active from products where id = any($1::bigint[])`,
-      [ids]
+      `select id,title,price,stock,is_active from products where id = any($1::bigint[])`, [ids]
     );
     const byId = new Map(products.map(p => [Number(p.id), p]));
-
     const normalized = [];
     for (const raw of items) {
       const id = Number(raw.product_id);
       const qty = Math.max(1, Math.min(99, Number(raw.quantity) || 1));
       const p = byId.get(id);
-      if (!p || !p.is_active) return res.status(400).json({ error: `Один из товаров больше недоступен` });
+      if (!p || !p.is_active) return res.status(400).json({ error: 'Один из товаров больше недоступен' });
       if (Number(p.stock) < qty) return res.status(400).json({ error: `Недостаточно товара «${p.title}». В наличии: ${p.stock}` });
       normalized.push({ id, title:p.title, price:Number(p.price), qty });
     }
 
-    const subtotal = normalized.reduce((sum, x) => sum + x.price * x.qty, 0);
-    const deliveryPrice = deliveryType === 'delivery' && subtotal < 15000 ? 500 : 0;
-    const total = subtotal + deliveryPrice;
-    const orderNumber = `Z${new Date().toISOString().slice(2,10).replaceAll('-','')}-${Math.random().toString(36).slice(2,7).toUpperCase()}`;
+    const subtotal = normalized.reduce((sum,x)=>sum+x.price*x.qty,0);
+    const deliveryPrice = 0;
+    const total = subtotal;
+    const orderNumber = `Z-${new Date().toISOString().slice(2,10).replaceAll('-','')}-${Math.random().toString(36).slice(2,7).toUpperCase()}`;
 
     await client.query('begin');
     const { rows } = await client.query(`
       insert into orders
-      (order_number,customer_name,customer_phone,customer_email,delivery_type,delivery_address,payment_type,comment,subtotal,delivery_price,total)
-      values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-      returning id,order_number,total,status,created_at
-    `, [
-      orderNumber, name, phone, String(body.customer_email || '').trim() || null,
-      deliveryType, deliveryType === 'delivery' ? address : null,
-      paymentType, String(body.comment || '').trim() || null,
-      subtotal, deliveryPrice, total
-    ]);
-    const order = rows[0];
+      (order_number,customer_name,customer_phone,customer_email,delivery_type,delivery_address,payment_type,comment,subtotal,delivery_price,total,status)
+      values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'new')
+      returning id,order_number,total,subtotal,delivery_price,status,created_at,delivery_type,delivery_address
+    `,[orderNumber,name,phone,email||null,deliveryType,deliveryType==='pickup'?null:address,paymentType,comment||null,subtotal,deliveryPrice,total]);
+    const order=rows[0];
 
-    for (const item of normalized) {
-      await client.query(`
-        insert into order_items(order_id,product_id,title,price,quantity,line_total)
-        values ($1,$2,$3,$4,$5,$6)
-      `,[order.id,item.id,item.title,item.price,item.qty,item.price*item.qty]);
-      await client.query(`update products set stock=stock-$1, updated_at=now() where id=$2`,[item.qty,item.id]);
+    for(const item of normalized){
+      await client.query(`insert into order_items(order_id,product_id,title,price,quantity,line_total) values($1,$2,$3,$4,$5,$6)`,
+        [order.id,item.id,item.title,item.price,item.qty,item.price*item.qty]);
     }
+    // DIGIT УЧЕТ is the inventory master. A website order does not reduce stock.
     await client.query('commit');
-    res.status(201).json({ ok:true, order });
-  } catch (e) {
+    res.status(201).json({
+      ok:true,
+      order:{...order,delivery_label:DELIVERY_METHODS[deliveryType],customer_name:name,customer_phone:phone,customer_email:email,payment_type:paymentType,comment},
+      items:normalized.map(x=>({product_id:x.id,title:x.title,price:x.price,quantity:x.qty,line_total:x.price*x.qty}))
+    });
+  } catch(e){
     await client.query('rollback').catch(()=>{});
-    res.status(500).json({ error: e.message });
-  } finally {
-    client.release();
-  }
+    res.status(500).json({error:e.message});
+  } finally { client.release(); }
 });
 
+app.get('/api/admin/orders', requireAdmin, async (_, res) => {
+  try {
+    const { rows: orders } = await query(`select * from orders order by created_at desc limit 300`);
+    if (!orders.length) return res.json([]);
+    const ids=orders.map(o=>o.id);
+    const { rows: items }=await query(`select * from order_items where order_id = any($1::bigint[]) order by id`,[ids]);
+    const grouped=new Map();
+    for(const item of items){const id=Number(item.order_id);if(!grouped.has(id))grouped.set(id,[]);grouped.get(id).push(item);}
+    res.json(orders.map(o=>({...o,delivery_label:DELIVERY_METHODS[o.delivery_type]||o.delivery_type,items:grouped.get(Number(o.id))||[]})));
+  } catch(e){res.status(500).json({error:e.message});}
+});
 
+app.patch('/api/admin/orders/:id/status', requireAdmin, async (req,res)=>{
+  try{
+    const id=Number(req.params.id), status=String(req.body?.status||'').trim();
+    if(!Number.isFinite(id)) return res.status(400).json({error:'Некорректный ID заказа'});
+    if(!ORDER_STATUSES.has(status)) return res.status(400).json({error:'Некорректный статус заказа'});
+    const {rows}=await query(`update orders set status=$1 where id=$2 returning *`,[status,id]);
+    if(!rows.length) return res.status(404).json({error:'Заказ не найден'});
+    res.json(rows[0]);
+  }catch(e){res.status(500).json({error:e.message});}
+});
 
 app.get('/api/digit/status', requireDigitApiKey, async (_, res) => {
   try {
@@ -352,6 +434,10 @@ app.post('/api/digit/sync', requireDigitApiKey, async (req, res) => {
       try {
         const p = normalizeDigitProduct(raw);
         seenIds.push(p.digit_product_id);
+
+        // DIGIT УЧЁТ is the source of truth for catalog category names.
+        // Any category that exists in DIGIT is created on the website automatically.
+        await ensureDigitCategory(client, p.category);
 
         const existing = await client.query(
           `select id, sync_enabled from products where digit_product_id=$1 limit 1`,
@@ -596,6 +682,7 @@ app.post('/api/admin/products', requireAdmin, async (req, res) => {
   try {
     const p = req.body || {};
     const { specsJson, imagesJson } = productAdminJsonPayload(p);
+    await ensureDigitCategory({ query: (...args) => query(...args) }, p.category);
 
     const { rows } = await query(`
       insert into products
@@ -649,6 +736,7 @@ app.put('/api/admin/products/:id', requireAdmin, async (req, res) => {
 
     const p = req.body || {};
     const { specsJson, imagesJson } = productAdminJsonPayload(p);
+    await ensureDigitCategory({ query: (...args) => query(...args) }, p.category);
 
     const { rows } = await query(`
       update products set

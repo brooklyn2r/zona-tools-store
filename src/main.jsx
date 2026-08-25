@@ -7,9 +7,26 @@ import {
 } from 'lucide-react';
 import './styles.css';
 import './stage7.css';
-import { getProducts, getCategories, adminLogin, addProduct, editProduct, removeProduct, uploadImage, createOrder } from './api';
+import { getProducts, getCategories, adminLogin, addProduct, editProduct, removeProduct, uploadImage, createOrder, getAdminOrders, updateOrderStatus } from './api';
 
 const rub=n=>new Intl.NumberFormat('ru-RU').format(Number(n||0))+' ₽';
+const STORE={address:'г. Хасавюрт, ул. Бамовская, 74',phones:[
+{display:'+7 922 258-13-13',href:'tel:+79222581313'},
+{display:'+7 922 920-03-03',href:'tel:+79229200303'},
+{display:'+7 928 567-45-88',href:'tel:+79285674588'}],
+whatsapp:'79229200303',
+instagram:[
+{label:'@zona_instrumenty',href:'https://www.instagram.com/zona_instrumenty/'},
+{label:'@zona.instrumentov',href:'https://www.instagram.com/zona.instrumentov/'}],
+mapQuery:'Хасавюрт, улица Бамовская, 74'};
+const DELIVERY_OPTIONS=[
+{id:'pickup',title:'Самовывоз',desc:'Хасавюрт, ул. Бамовская, 74',icon:'store'},
+{id:'cdek',title:'СДЭК',desc:'Пункт выдачи или доставка до адреса',icon:'truck'},
+{id:'russian_post',title:'Почта России',desc:'Отправка по России',icon:'package'},
+{id:'local_courier',title:'Доставка по Хасавюрту',desc:'Адрес согласуем с менеджером',icon:'truck'},
+{id:'transport_company',title:'Транспортная компания',desc:'Другая удобная служба доставки',icon:'package'}];
+const ORDER_STATUS={new:'Новый',confirmed:'Подтверждён',assembling:'Собирается',shipped:'Отправлен',completed:'Выполнен',cancelled:'Отменён'};
+
 
 function DrillCursor({page}){
   React.useEffect(()=>{
@@ -211,39 +228,24 @@ function ProductCard({p,index=0,open,add,favs,toggleFav,compare,toggleCompare,vi
   </article>
 }
 
-function CommerceHeader({page,setPage,query,setQuery,cartCount,openCart,favCount,compareCount,setAdmin}){
+function CommerceHeader({page,setPage,query,setQuery,cartCount,openCart,favCount,compareCount,setAdmin,goHomeContacts}){
   return <>
     <div className="commerce-topbar">
-      <div><MapPin size={13}/> Хасавюрт</div>
-      <nav><button>Магазин</button><button>Доставка и оплата</button><button>Гарантия</button><button>Контакты</button></nav>
-      <div className="commerce-phone"><Phone size={13}/> 8 (988) 800-05-05</div>
+      <button className="topbar-location" onClick={goHomeContacts}><MapPin size={14}/> {STORE.address}</button>
+      <nav><button onClick={()=>setPage('home')}>Магазин</button><button onClick={()=>setPage('delivery')}>Доставка и оплата</button><button onClick={goHomeContacts}>Контакты</button></nav>
+      <div className="commerce-phone"><Phone size={14}/><a href={STORE.phones[1].href}>{STORE.phones[1].display}</a></div>
     </div>
     <header className="commerce-header glass">
       <button className="commerce-logo" onClick={()=>setPage('home')}><img src="/zona-logo.png"/></button>
       <button className="commerce-catalog-button" onClick={()=>setPage('catalog')}><Menu size={20}/> Каталог</button>
-      <form className="commerce-search" onSubmit={e=>{e.preventDefault();setPage('catalog')}}>
-        <Search size={20}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Поиск по товарам и категориям"/>
-        {query&&<button type="button" onClick={()=>setQuery('')}><X size={16}/></button>}
-      </form>
-      <div className="commerce-actions">
-        <button onClick={()=>setPage('compare')}><Scale/><span>Сравнение</span>{compareCount>0&&<i>{compareCount}</i>}</button>
-        <button onClick={()=>setPage('favorites')}><Heart/><span>Избранное</span>{favCount>0&&<i>{favCount}</i>}</button>
-        <button onClick={openCart}><ShoppingCart/><span>Корзина</span>{cartCount>0&&<i>{cartCount}</i>}</button>
-        <button onClick={()=>setAdmin(true)}><UserRound/><span>Войти</span></button>
-      </div>
+      <form className="commerce-search" onSubmit={e=>{e.preventDefault();setPage('catalog')}}><Search size={20}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Поиск по товарам и категориям"/>{query&&<button type="button" onClick={()=>setQuery('')}><X size={16}/></button>}</form>
+      <div className="commerce-actions"><button onClick={()=>setPage('compare')}><Scale/><span>Сравнение</span>{compareCount>0&&<i>{compareCount}</i>}</button><button onClick={()=>setPage('favorites')}><Heart/><span>Избранное</span>{favCount>0&&<i>{favCount}</i>}</button><button onClick={openCart}><ShoppingCart/><span>Корзина</span>{cartCount>0&&<i>{cartCount}</i>}</button><button onClick={()=>setAdmin(true)}><UserRound/><span>Войти</span></button></div>
     </header>
-    <nav className="commerce-quick-nav">
-      <button onClick={()=>setPage('catalog')}>Акции</button>
-      <button onClick={()=>setPage('catalog')}>Новинки</button>
-      <button onClick={()=>setPage('catalog')}>Электроинструмент</button>
-      <button onClick={()=>setPage('catalog')}>Расходные материалы</button>
-      <button onClick={()=>setPage('catalog')}>Силовая техника</button>
-      <button onClick={()=>setPage('catalog')}>Измерительный инструмент</button>
-    </nav>
+    <nav className="commerce-quick-nav"><button onClick={()=>setPage('catalog')}>Каталог товаров</button><button onClick={()=>setPage('delivery')}>СДЭК</button><button onClick={()=>setPage('delivery')}>Почта России</button><button onClick={goHomeContacts}>Магазин на карте</button><a href={`https://wa.me/${STORE.whatsapp}`} target="_blank" rel="noreferrer"><MessageCircle size={14}/> WhatsApp</a></nav>
   </>
 }
 
-function HomePage({products,categories,setPage,open,add,favs,toggleFav,compare,toggleCompare}){
+function HomePage({products,categories,setPage,setQuery,open,add,favs,toggleFav,compare,toggleCompare}){
   return <>
     <section className="commerce-hero">
       <div className="commerce-hero-main glass">
@@ -278,7 +280,7 @@ function HomePage({products,categories,setPage,open,add,favs,toggleFav,compare,t
     <section className="home-section">
       <div className="home-section-head"><div><span>КАТАЛОГ</span><h2>Популярные категории</h2></div><button onClick={()=>setPage('catalog')}>Все категории <ArrowRight size={16}/></button></div>
       <div className="commerce-categories">
-        {categories.slice(0,8).map(c=><button key={c.id||c.name} className="commerce-category glass interactive-card" onClick={()=>{setPage('catalog');}}>
+        {categories.slice(0,8).map(c=><button key={c.id||c.name} className="commerce-category glass interactive-card" onClick={()=>{setQuery(c.name);setPage('catalog');}}>
           <div><img src={categoryIcons[c.name]||'/tool-drill.svg'}/></div><span>{c.name}</span><small>Перейти →</small>
         </button>)}
       </div>
@@ -291,6 +293,13 @@ function HomePage({products,categories,setPage,open,add,favs,toggleFav,compare,t
       </div>
     </section>
 
+    <section className="home-contact-head">
+      <div className="home-section-head">
+        <div><span>КОНТАКТЫ</span><h2>Магазин ZONA в Хасавюрте</h2></div>
+      </div>
+    </section>
+    <StoreContactsBlock/>
+
     <section className="commerce-benefits glass">
       <div><BadgeCheck/><span><b>Оригинальная продукция</b><small>Гарантия на товары</small></span></div>
       <div><Truck/><span><b>Удобная доставка</b><small>Курьер и самовывоз</small></span></div>
@@ -300,6 +309,13 @@ function HomePage({products,categories,setPage,open,add,favs,toggleFav,compare,t
   </>
 }
 
+
+function StoreContactsBlock(){
+ const mapSrc=`https://yandex.ru/map-widget/v1/?mode=search&text=${encodeURIComponent(STORE.mapQuery)}&z=17`;
+ return <section className="store-contact-section"><div className="store-contact-info glass"><span className="eyebrow">ZONA • ХАСАВЮРТ</span><h2>Магазин электроинструментов ZONA</h2><a className="store-address" href={`https://yandex.ru/maps/?text=${encodeURIComponent(STORE.mapQuery)}`} target="_blank" rel="noreferrer"><MapPin/><span><b>{STORE.address}</b><small>Открыть маршрут в Яндекс Картах</small></span></a><div className="contact-phone-list">{STORE.phones.map(p=><a key={p.href} href={p.href}><Phone/>{p.display}</a>)}</div><div className="contact-socials"><a className="whatsapp-contact" href={`https://wa.me/${STORE.whatsapp}`} target="_blank" rel="noreferrer"><MessageCircle/>WhatsApp</a>{STORE.instagram.map(x=><a key={x.label} href={x.href} target="_blank" rel="noreferrer"><Instagram/>{x.label}</a>)}</div></div><div className="store-map glass"><iframe title="ZONA — Бамовская 74" src={mapSrc} loading="lazy" allowFullScreen referrerPolicy="no-referrer-when-downgrade"/></div></section>
+}
+function ContactsPage({setPage}){return <section className="contacts-page"><div className="breadcrumbs"><button onClick={()=>setPage('home')}>Главная</button><span>›</span><b>Контакты</b></div><div className="page-title"><span className="eyebrow">КОНТАКТЫ</span><h1>Приезжайте в ZONA</h1><p>Позвоните или напишите нам — поможем подобрать инструмент и подготовим заказ.</p></div><StoreContactsBlock/></section>}
+function DeliveryPage({setPage}){return <section className="delivery-page"><div className="breadcrumbs"><button onClick={()=>setPage('home')}>Главная</button><span>›</span><b>Доставка и оплата</b></div><div className="page-title"><span className="eyebrow">ДОСТАВКА</span><h1>Отправляем удобным способом</h1><p>Стоимость и сроки доставки подтверждает менеджер после получения заказа.</p></div><div className="delivery-info-grid"><div className="glass"><StoreIcon/><h3>Самовывоз</h3><p>{STORE.address}</p><b>Бесплатно</b></div><div className="glass"><Truck/><h3>СДЭК</h3><p>До пункта выдачи или до адреса.</p><b>По тарифу СДЭК</b></div><div className="glass"><PackageOpen/><h3>Почта России</h3><p>Отправка по всей России.</p><b>По тарифу Почты России</b></div><div className="glass"><Truck/><h3>По Хасавюрту</h3><p>Доставка по городу по согласованию.</p><b>Стоимость уточняется</b></div><div className="glass"><Box/><h3>Другие перевозчики</h3><p>Укажите транспортную компанию при оформлении.</p><b>Согласуем индивидуально</b></div></div></section>}
 function FilterPanel({products,categories,cat,setCat,maxPrice,setMaxPrice,stockOnly,setStockOnly,minRating,setMinRating,specFilters,setSpecFilters,closeMobile}){
   const config=cat==='Все'?[]:(categorySpecConfig[cat]||[]);
   const scoped=cat==='Все'?products:products.filter(p=>p.category===cat);
@@ -461,85 +477,16 @@ function CollectionPage({title,items,open,add,favs,toggleFav,compare,toggleCompa
 
 
 function CheckoutPage({cart,setCart,setPage,onSuccess}){
-  const [form,setForm]=React.useState({customer_name:'',customer_phone:'',customer_email:'',delivery_type:'pickup',delivery_address:'',payment_type:'cash',comment:''});
-  const [loading,setLoading]=React.useState(false);
-  const [error,setError]=React.useState('');
-  const subtotal=cart.reduce((sum,x)=>sum+Number(x.price)*x.qty,0);
-  const deliveryPrice=form.delivery_type==='delivery'&&subtotal<15000?500:0;
-  const total=subtotal+deliveryPrice;
-  const change=(key,value)=>setForm(x=>({...x,[key]:value}));
-
-  const submit=async e=>{
-    e.preventDefault(); setError('');
-    if(!cart.length){setError('Корзина пуста');return}
-    setLoading(true);
-    try{
-      const result=await createOrder({...form,items:cart.map(x=>({product_id:x.id,quantity:x.qty}))});
-      setCart([]);
-      onSuccess(result.order);
-    }catch(err){setError(err.message)}
-    finally{setLoading(false)}
-  };
-
-  return <section className="checkout-page">
-    <div className="breadcrumbs"><button onClick={()=>setPage('home')}>Главная</button><span>›</span><button onClick={()=>setPage('catalog')}>Каталог</button><span>›</span><b>Оформление заказа</b></div>
-    <div className="checkout-head"><h1>Оформление заказа</h1><span>{cart.reduce((a,b)=>a+b.qty,0)} товара</span></div>
-    <form className="checkout-layout" onSubmit={submit}>
-      <div className="checkout-fields">
-        <section className="checkout-section glass">
-          <div className="checkout-step">1</div><div className="checkout-section-content">
-            <h2>Получатель</h2><p>Контактные данные для подтверждения заказа</p>
-            <div className="checkout-input-grid">
-              <label><span>Имя *</span><input required value={form.customer_name} onChange={e=>change('customer_name',e.target.value)} placeholder="Как к вам обращаться"/></label>
-              <label><span>Телефон *</span><input required value={form.customer_phone} onChange={e=>change('customer_phone',e.target.value)} placeholder="+7 (___) ___-__-__"/></label>
-              <label className="wide"><span>Email</span><input type="email" value={form.customer_email} onChange={e=>change('customer_email',e.target.value)} placeholder="Для информации о заказе"/></label>
-            </div>
-          </div>
-        </section>
-        <section className="checkout-section glass">
-          <div className="checkout-step">2</div><div className="checkout-section-content">
-            <h2>Получение</h2><p>Выберите удобный способ</p>
-            <div className="choice-cards">
-              <label className={form.delivery_type==='pickup'?'active':''}><input type="radio" name="delivery" checked={form.delivery_type==='pickup'} onChange={()=>change('delivery_type','pickup')}/><StoreIcon/><span><b>Самовывоз</b><small>Хасавюрт, ул. Тотурбиева 140</small><em>Бесплатно</em></span></label>
-              <label className={form.delivery_type==='delivery'?'active':''}><input type="radio" name="delivery" checked={form.delivery_type==='delivery'} onChange={()=>change('delivery_type','delivery')}/><Truck/><span><b>Доставка</b><small>По Хасавюрту и району</small><em>{subtotal>=15000?'Бесплатно':'500 ₽'}</em></span></label>
-            </div>
-            {form.delivery_type==='delivery'&&<label className="checkout-address"><span>Адрес доставки *</span><input required value={form.delivery_address} onChange={e=>change('delivery_address',e.target.value)} placeholder="Улица, дом, квартира / ориентир"/></label>}
-          </div>
-        </section>
-        <section className="checkout-section glass">
-          <div className="checkout-step">3</div><div className="checkout-section-content">
-            <h2>Оплата</h2><p>Оплата заказа при получении</p>
-            <div className="choice-cards payment-cards">
-              <label className={form.payment_type==='cash'?'active':''}><input type="radio" name="payment" checked={form.payment_type==='cash'} onChange={()=>change('payment_type','cash')}/><span><b>Наличными</b><small>При получении заказа</small></span></label>
-              <label className={form.payment_type==='transfer'?'active':''}><input type="radio" name="payment" checked={form.payment_type==='transfer'} onChange={()=>change('payment_type','transfer')}/><span><b>Переводом</b><small>Реквизиты сообщит менеджер</small></span></label>
-            </div>
-            <label className="checkout-comment"><span>Комментарий к заказу</span><textarea value={form.comment} onChange={e=>change('comment',e.target.value)} placeholder="Например: позвонить за 30 минут до доставки"/></label>
-          </div>
-        </section>
-      </div>
-      <aside className="checkout-summary glass">
-        <h2>Ваш заказ</h2>
-        <div className="checkout-items">{cart.map(i=><div key={i.id} className="checkout-item"><img src={productImage(i)}/><div><b>{i.title}</b><small>{i.qty} × {rub(i.price)}</small></div><strong>{rub(Number(i.price)*i.qty)}</strong></div>)}</div>
-        <div className="checkout-totals"><div><span>Товары</span><b>{rub(subtotal)}</b></div><div><span>Доставка</span><b>{deliveryPrice?rub(deliveryPrice):'Бесплатно'}</b></div><div className="grand"><span>Итого</span><b>{rub(total)}</b></div></div>
-        {error&&<div className="checkout-error">{error}</div>}
-        <button className="primary checkout-submit" disabled={loading||!cart.length}>{loading?'Оформляем…':'Оформить заказ'}</button>
-        <p className="checkout-policy"><ShieldCheck/> Нажимая кнопку, вы подтверждаете данные заказа. Менеджер свяжется с вами для подтверждения.</p>
-      </aside>
-    </form>
-  </section>
+ const [form,setForm]=React.useState({customer_name:'',customer_phone:'',customer_email:'',delivery_type:'pickup',delivery_address:'',payment_type:'cash',comment:''});
+ const [loading,setLoading]=React.useState(false),[error,setError]=React.useState('');
+ const subtotal=cart.reduce((s,x)=>s+Number(x.price)*x.qty,0), change=(k,v)=>setForm(x=>({...x,[k]:v}));
+ const selected=DELIVERY_OPTIONS.find(x=>x.id===form.delivery_type);
+ const placeholders={cdek:'Город, адрес или пункт выдачи СДЭК',russian_post:'Индекс, город, улица, дом, квартира',local_courier:'Адрес доставки в Хасавюрте',transport_company:'Название ТК, город, терминал или адрес'};
+ const submit=async e=>{e.preventDefault();setError('');if(!cart.length){setError('Корзина пуста');return}const waWindow=window.open('about:blank','zona_whatsapp_order');setLoading(true);try{const snap=cart.map(x=>({...x}));const result=await createOrder({...form,items:snap.map(x=>({product_id:x.id,quantity:x.qty}))});const o=result.order;const lines=[`🛠 *Новый заказ ZONA №${o.order_number}*`,'',...snap.flatMap((x,i)=>[`${i+1}. ${x.title}`,`   ${x.qty} шт. × ${rub(x.price)} = ${rub(Number(x.price)*x.qty)}`]),'',`*Итого за товары: ${rub(o.total)}*`,form.delivery_type==='pickup'?'Доставка: Самовывоз':`Доставка: ${selected?.title} — стоимость рассчитывается отдельно`,'',`Покупатель: ${form.customer_name}`,`Телефон: ${form.customer_phone}`,form.customer_email?`Email: ${form.customer_email}`:'',`Получение: ${selected?.title}`,form.delivery_type!=='pickup'?`Адрес / ПВЗ / данные: ${form.delivery_address}`:`Адрес самовывоза: ${STORE.address}`,`Оплата: ${form.payment_type==='cash'?'Наличными':'Переводом'}`,form.comment?`Комментарий: ${form.comment}`:'','','Заказ оформлен на zona05.ru'].filter(Boolean);const url=`https://wa.me/${STORE.whatsapp}?text=${encodeURIComponent(lines.join('\n'))}`;setCart([]);onSuccess({...o,whatsapp_url:url});if(waWindow)waWindow.location.href=url;else window.location.href=url}catch(err){if(waWindow)waWindow.close();setError(err.message)}finally{setLoading(false)}};
+ return <section className="checkout-page"><div className="breadcrumbs"><button onClick={()=>setPage('home')}>Главная</button><span>›</span><button onClick={()=>setPage('catalog')}>Каталог</button><span>›</span><b>Оформление заказа</b></div><div className="checkout-head"><h1>Оформление заказа</h1><span>{cart.reduce((a,b)=>a+b.qty,0)} товара</span></div><form className="checkout-layout" onSubmit={submit}><div className="checkout-fields"><section className="checkout-section glass"><div className="checkout-step">1</div><div className="checkout-section-content"><h2>Получатель</h2><p>Контактные данные</p><div className="checkout-input-grid"><label><span>Имя *</span><input required value={form.customer_name} onChange={e=>change('customer_name',e.target.value)}/></label><label><span>Телефон *</span><input required value={form.customer_phone} onChange={e=>change('customer_phone',e.target.value)} placeholder="+7..."/></label><label className="wide"><span>Email</span><input type="email" value={form.customer_email} onChange={e=>change('customer_email',e.target.value)}/></label></div></div></section><section className="checkout-section glass"><div className="checkout-step">2</div><div className="checkout-section-content"><h2>Способ получения</h2><p>Выберите удобный вариант</p><div className="delivery-choice-grid">{DELIVERY_OPTIONS.map(o=><label key={o.id} className={form.delivery_type===o.id?'active':''}><input type="radio" checked={form.delivery_type===o.id} onChange={()=>change('delivery_type',o.id)}/>{o.icon==='store'?<StoreIcon/>:o.icon==='package'?<PackageOpen/>:<Truck/>}<span><b>{o.title}</b><small>{o.desc}</small><em>{o.id==='pickup'?'Бесплатно':'По тарифу / согласованию'}</em></span></label>)}</div>{form.delivery_type!=='pickup'&&<label className="checkout-address"><span>Данные для доставки *</span><input required value={form.delivery_address} onChange={e=>change('delivery_address',e.target.value)} placeholder={placeholders[form.delivery_type]||''}/></label>}</div></section><section className="checkout-section glass"><div className="checkout-step">3</div><div className="checkout-section-content"><h2>Оплата</h2><div className="choice-cards payment-cards"><label className={form.payment_type==='cash'?'active':''}><input type="radio" checked={form.payment_type==='cash'} onChange={()=>change('payment_type','cash')}/><span><b>Наличными</b><small>Если способ получения позволяет</small></span></label><label className={form.payment_type==='transfer'?'active':''}><input type="radio" checked={form.payment_type==='transfer'} onChange={()=>change('payment_type','transfer')}/><span><b>Переводом</b><small>Реквизиты сообщит менеджер</small></span></label></div><label className="checkout-comment"><span>Комментарий</span><textarea value={form.comment} onChange={e=>change('comment',e.target.value)}/></label></div></section></div><aside className="checkout-summary glass"><h2>Ваш заказ</h2><div className="checkout-items">{cart.map(i=><div key={i.id} className="checkout-item"><img src={productImage(i)}/><div><b>{i.title}</b><small>{i.qty} × {rub(i.price)}</small></div><strong>{rub(Number(i.price)*i.qty)}</strong></div>)}</div><div className="checkout-totals"><div><span>Товары</span><b>{rub(subtotal)}</b></div><div><span>Получение</span><b>{selected?.title}</b></div><div><span>Доставка</span><b>{form.delivery_type==='pickup'?'Бесплатно':'Рассчитывается отдельно'}</b></div><div className="grand"><span>Итого за товары</span><b>{rub(subtotal)}</b></div></div>{error&&<div className="checkout-error">{error}</div>}<button className="primary checkout-submit" disabled={loading||!cart.length}><MessageCircle/>{loading?'Оформляем…':'Оформить и перейти в WhatsApp'}</button><p className="checkout-policy"><ShieldCheck/> Заказ сохранится в ZONA, затем откроется WhatsApp с готовым сообщением. Останется нажать «Отправить».</p></aside></form></section>
 }
 
-function OrderSuccess({order,setPage}){
-  return <section className="order-success glass">
-    <div className="success-icon"><Check/></div>
-    <span className="eyebrow">ЗАКАЗ ПРИНЯТ</span>
-    <h1>Спасибо за заказ!</h1>
-    <p>Номер вашего заказа <b>{order?.order_number}</b>. Мы получили заявку и свяжемся с вами по телефону для подтверждения.</p>
-    <div className="success-total"><span>Сумма заказа</span><strong>{rub(order?.total)}</strong></div>
-    <div className="success-actions"><button className="primary" onClick={()=>setPage('catalog')}>Продолжить покупки</button><button className="ghost" onClick={()=>setPage('home')}>На главную</button></div>
-  </section>
-}
-
+function OrderSuccess({order,setPage}){return <section className="order-success glass"><div className="success-icon"><Check/></div><span className="eyebrow">ЗАКАЗ СОХРАНЁН</span><h1>Заказ №{order?.order_number}</h1><p>Заказ сохранён в ZONA. WhatsApp открывается с готовым сообщением — останется нажать «Отправить».</p><div className="success-total"><span>Сумма товаров</span><strong>{rub(order?.total)}</strong></div><div className="success-actions">{order?.whatsapp_url&&<a className="primary whatsapp-repeat" href={order.whatsapp_url} target="_blank" rel="noreferrer"><MessageCircle/>Открыть WhatsApp ещё раз</a>}<button className="ghost" onClick={()=>setPage('catalog')}>Продолжить покупки</button></div></section>}
 
 
 function ComparePage({items,setPage,remove}){
@@ -579,6 +526,10 @@ function Store({products,categories,setAdmin}){
   const [completedOrder,setCompletedOrder]=React.useState(null);
 
   const nav=p=>{setPage(p);window.scrollTo({top:0,behavior:'smooth'})};
+  const goHomeContacts=()=>{
+    setPage('home');
+    setTimeout(()=>document.querySelector('.store-contact-section')?.scrollIntoView({behavior:'smooth',block:'start'}),80);
+  };
   const open=p=>{setSelected(p);nav('product')};
   const add=p=>{setCart(x=>{const f=x.find(i=>i.id===p.id);return f?x.map(i=>i.id===p.id?{...i,qty:i.qty+1}:i):[...x,{...p,qty:1}]});setCartOpen(true)};
   const toggleFav=id=>setFavs(x=>x.includes(id)?x.filter(v=>v!==id):[...x,id]);
@@ -588,22 +539,22 @@ function Store({products,categories,setAdmin}){
 
   return <div className="app commerce-app">
     <DrillCursor page={page}/>
-    <CommerceHeader page={page} setPage={nav} query={query} setQuery={setQuery} cartCount={count} openCart={()=>setCartOpen(true)} favCount={favs.length} compareCount={compare.length} setAdmin={setAdmin}/>
+    <CommerceHeader page={page} setPage={nav} query={query} setQuery={setQuery} cartCount={count} openCart={()=>setCartOpen(true)} favCount={favs.length} compareCount={compare.length} setAdmin={setAdmin} goHomeContacts={goHomeContacts}/>
     <main className="commerce-main">
-      {page==='home'&&<HomePage products={products} categories={categories} setPage={nav} open={open} add={add} favs={favs} toggleFav={toggleFav} compare={compare} toggleCompare={toggleCompare}/>}
+      {page==='home'&&<HomePage products={products} categories={categories} setPage={nav} setQuery={setQuery} open={open} add={add} favs={favs} toggleFav={toggleFav} compare={compare} toggleCompare={toggleCompare}/>}
       {page==='catalog'&&<CatalogPage products={products} categories={categories} query={query} setQuery={setQuery} open={open} add={add} favs={favs} toggleFav={toggleFav} compare={compare} toggleCompare={toggleCompare}/>}
       {page==='product'&&selected&&<ProductPage selected={selected} products={products} open={open} add={add} favs={favs} toggleFav={toggleFav} compare={compare} toggleCompare={toggleCompare} setPage={nav}/>}
       {page==='favorites'&&<CollectionPage title="Избранное" items={products.filter(x=>favs.includes(x.id))} open={open} add={add} favs={favs} toggleFav={toggleFav} compare={compare} toggleCompare={toggleCompare} setPage={nav} emptyIcon={<Heart size={42}/>}/>}
       {page==='compare'&&<ComparePage items={products.filter(x=>compare.includes(x.id))} setPage={nav} remove={toggleCompare}/>}
       {page==='checkout'&&<CheckoutPage cart={cart} setCart={setCart} setPage={nav} onSuccess={order=>{setCompletedOrder(order);nav('success')}}/>}
-      {page==='success'&&<OrderSuccess order={completedOrder} setPage={nav}/>}
+      {page==='success'&&<OrderSuccess order={completedOrder} setPage={nav}/>} {page==='contacts'&&<ContactsPage setPage={nav}/>} {page==='delivery'&&<DeliveryPage setPage={nav}/>}
     </main>
 
-    <footer className="commerce-footer">
-      <div><img src="/zona-logo.png"/><p>Электроинструменты для дома и профессиональной работы.</p></div>
-      <nav><b>Покупателям</b><button onClick={()=>nav('catalog')}>Каталог</button><button>Доставка и оплата</button><button>Возврат</button></nav>
-      <nav><b>Компания</b><button>О нас</button><button>Контакты</button><button>Гарантия</button></nav>
-      <div className="footer-contact"><b>8 (988) 800-05-05</b><span>Хасавюрт, ул. Тотурбиева 140</span><button onClick={()=>setAdmin(true)}>Админ-панель</button></div>
+    <footer className="commerce-footer final-footer">
+      <div><img src="/zona-logo.png"/><p>Электроинструменты для дома, стройки и профессиональной работы.</p><a className="footer-address" href={`https://yandex.ru/maps/?text=${encodeURIComponent(STORE.mapQuery)}`} target="_blank" rel="noreferrer"><MapPin/>{STORE.address}</a></div>
+      <nav><b>Покупателям</b><button onClick={()=>nav('catalog')}>Каталог</button><button onClick={()=>nav('delivery')}>Доставка и оплата</button><button onClick={goHomeContacts}>Контакты и карта</button></nav>
+      <div className="footer-contacts"><b>Связаться</b>{STORE.phones.map(p=><a key={p.href} href={p.href}><Phone/>{p.display}</a>)}<a className="footer-wa" href={`https://wa.me/${STORE.whatsapp}`} target="_blank" rel="noreferrer"><MessageCircle/>WhatsApp</a></div>
+      <div className="footer-social"><b>Instagram</b>{STORE.instagram.map(x=><a key={x.label} href={x.href} target="_blank" rel="noreferrer"><Instagram/>{x.label}</a>)}<button onClick={()=>setAdmin(true)}>Админ-панель</button></div>
     </footer>
 
     <div className={'drawer-bg '+(cartOpen?'show':'')} onClick={()=>setCartOpen(false)}/>
@@ -671,13 +622,15 @@ function ProductForm({item,categories,onSave,onCancel}){
 }
 
 function Admin({onExit}){
-  const [tab,setTab]=React.useState('products'),[products,setProducts]=React.useState([]),[categories,setCategories]=React.useState([]),[loading,setLoading]=React.useState(true),[edit,setEdit]=React.useState(null),[form,setForm]=React.useState(false);
-  const load=async()=>{setLoading(true);try{setProducts(await getProducts(true));setCategories(await getCategories())}catch(e){alert(e.message)}finally{setLoading(false)}};
-  React.useEffect(()=>{load()},[]);
-  const save=async data=>{try{if(edit)await editProduct(edit.id,data);else await addProduct(data);setForm(false);setEdit(null);await load()}catch(e){alert(e.message)}};
-  const del=async p=>{if(!confirm('Удалить товар «'+p.title+'»?'))return;try{await removeProduct(p.id);await load()}catch(e){alert(e.message)}};
-  const logout=()=>{localStorage.removeItem('zona_admin_token');onExit()};
-  return <div className="admin-shell"><DrillCursor page={"admin-"+tab}/><aside className="admin-side glass"><img src="/zona-logo.png"/><span className="admin-badge">ПАНЕЛЬ УПРАВЛЕНИЯ</span><nav><button className={tab==='dashboard'?'active':''} onClick={()=>setTab('dashboard')}><LayoutDashboard/>Обзор</button><button className={tab==='products'?'active':''} onClick={()=>setTab('products')}><Package/>Товары</button><button className={tab==='orders'?'active':''} onClick={()=>setTab('orders')}><ShoppingBag/>Заказы</button></nav><div className="side-bottom"><span className="online">● Node API + PostgreSQL</span><button onClick={logout}><LogOut/>Выйти</button></div></aside><main className="admin-main"><header><div><span className="eyebrow">ZONA CONTROL</span><h1>{tab==='products'?'Товары':tab==='orders'?'Заказы':'Обзор магазина'}</h1></div>{tab==='products'&&<button className="primary" onClick={()=>{setEdit(null);setForm(true)}}>+ Добавить товар</button>}</header>{tab==='dashboard'&&<div className="stats"><div className="glass"><small>Товаров</small><strong>{products.length}</strong></div><div className="glass"><small>В наличии</small><strong>{products.reduce((a,b)=>a+(b.stock||0),0)}</strong></div><div className="glass"><small>На главной</small><strong>{products.filter(x=>x.is_featured).length}</strong></div></div>}{tab==='products'&&<div className="admin-table glass">{loading?<div className="loading">Загрузка...</div>:products.map(p=><div className="admin-row" key={p.id}><img src={p.image_url||'/tool-drill.svg'}/><div className="admin-name"><b>{p.title}</b><small>{p.category} · {p.spec}</small><em className={'sync-badge '+(p.sync_source==='digit'?'digit':'manual')}>{p.sync_source==='digit'?'DIGIT':'САЙТ'}</em></div><strong>{rub(p.price)}</strong><span>{p.stock} шт.</span><span className={p.is_active?'status on':'status'}>{p.is_active?<><Eye/>Активен</>:<><EyeOff/>Скрыт</>}</span><button onClick={()=>{setEdit(p);setForm(true)}}><Pencil/></button><button className="danger" onClick={()=>del(p)}><Trash2/></button></div>)}</div>}{tab==='orders'&&<div className="empty-admin glass"><ShoppingBag/><h2>Заказы будут здесь</h2><p>В этой версии админка предназначена только для товаров: добавление, редактирование и удаление.</p></div>}</main>{form&&<ProductForm item={edit} categories={categories} onSave={save} onCancel={()=>{setForm(false);setEdit(null)}}/>}</div>
+ const [tab,setTab]=React.useState('products'),[products,setProducts]=React.useState([]),[categories,setCategories]=React.useState([]),[orders,setOrders]=React.useState([]),[loading,setLoading]=React.useState(true),[ordersLoading,setOrdersLoading]=React.useState(false),[edit,setEdit]=React.useState(null),[form,setForm]=React.useState(false),[expandedOrder,setExpandedOrder]=React.useState(null);
+ const load=async()=>{setLoading(true);try{setProducts(await getProducts(true));setCategories(await getCategories())}catch(e){alert(e.message)}finally{setLoading(false)}};
+ const loadOrders=async()=>{setOrdersLoading(true);try{setOrders(await getAdminOrders())}catch(e){alert(e.message)}finally{setOrdersLoading(false)}};
+ React.useEffect(()=>{load()},[]);React.useEffect(()=>{if(tab==='orders')loadOrders()},[tab]);
+ const save=async data=>{try{if(edit)await editProduct(edit.id,data);else await addProduct(data);setForm(false);setEdit(null);await load()}catch(e){alert(e.message)}};
+ const del=async p=>{if(!confirm('Удалить товар «'+p.title+'»?'))return;try{await removeProduct(p.id);await load()}catch(e){alert(e.message)}};
+ const changeStatus=async(o,status)=>{try{await updateOrderStatus(o.id,status);await loadOrders()}catch(e){alert(e.message)}};
+ const logout=()=>{localStorage.removeItem('zona_admin_token');onExit()};const newOrders=orders.filter(o=>o.status==='new').length;
+ return <div className="admin-shell"><DrillCursor page={"admin-"+tab}/><aside className="admin-side glass"><img src="/zona-logo.png"/><span className="admin-badge">ПАНЕЛЬ УПРАВЛЕНИЯ</span><nav><button className={tab==='dashboard'?'active':''} onClick={()=>setTab('dashboard')}><LayoutDashboard/>Обзор</button><button className={tab==='products'?'active':''} onClick={()=>setTab('products')}><Package/>Товары</button><button className={tab==='orders'?'active':''} onClick={()=>setTab('orders')}><ShoppingBag/>Заказы{newOrders>0&&<i className="admin-order-count">{newOrders}</i>}</button></nav><div className="side-bottom"><span className="online">● Node API + PostgreSQL</span><button onClick={logout}><LogOut/>Выйти</button></div></aside><main className="admin-main"><header><div><span className="eyebrow">ZONA CONTROL</span><h1>{tab==='products'?'Товары':tab==='orders'?'Заказы':'Обзор магазина'}</h1></div>{tab==='products'&&<button className="primary" onClick={()=>{setEdit(null);setForm(true)}}>+ Добавить товар</button>}</header>{tab==='dashboard'&&<div className="stats"><div className="glass"><small>Товаров</small><strong>{products.length}</strong></div><div className="glass"><small>В наличии</small><strong>{products.reduce((a,b)=>a+(b.stock||0),0)}</strong></div><div className="glass"><small>Новых заказов</small><strong>{newOrders}</strong></div></div>}{tab==='products'&&<div className="admin-table glass">{loading?<div className="loading">Загрузка...</div>:products.map(p=><div className="admin-row" key={p.id}><img src={p.image_url||'/tool-drill.svg'}/><div className="admin-name"><b>{p.title}</b><small>{p.category} · {p.spec}</small><em className={'sync-badge '+(p.sync_source==='digit'?'digit':'manual')}>{p.sync_source==='digit'?'DIGIT':'САЙТ'}</em></div><strong>{rub(p.price)}</strong><span>{p.stock} шт.</span><span className={p.is_active?'status on':'status'}>{p.is_active?<><Eye/>Активен</>:<><EyeOff/>Скрыт</>}</span><button onClick={()=>{setEdit(p);setForm(true)}}><Pencil/></button><button className="danger" onClick={()=>del(p)}><Trash2/></button></div>)}</div>}{tab==='orders'&&<div className="orders-admin">{ordersLoading?<div className="loading glass">Загрузка заказов...</div>:orders.length===0?<div className="empty-admin glass"><ShoppingBag/><h2>Заказов пока нет</h2></div>:orders.map(o=><article className="admin-order-card glass" key={o.id}><div className="admin-order-head" onClick={()=>setExpandedOrder(expandedOrder===o.id?null:o.id)}><div><span className="order-number">{o.order_number}</span><small>{new Date(o.created_at).toLocaleString('ru-RU')}</small></div><div><b>{o.customer_name}</b><a href={`tel:${o.customer_phone}`}>{o.customer_phone}</a></div><div><span>{o.delivery_label}</span><strong>{rub(o.total)}</strong></div><select value={o.status} onClick={e=>e.stopPropagation()} onChange={e=>changeStatus(o,e.target.value)}>{Object.entries(ORDER_STATUS).map(([v,l])=><option value={v} key={v}>{l}</option>)}</select><ChevronDown className={expandedOrder===o.id?'rotated':''}/></div>{expandedOrder===o.id&&<div className="admin-order-body"><div className="admin-order-items">{o.items.map(i=><div key={i.id}><span>{i.title}<small>{i.quantity} × {rub(i.price)}</small></span><b>{rub(i.line_total)}</b></div>)}</div><div className="admin-order-details"><p><b>Получение:</b> {o.delivery_label}</p>{o.delivery_address&&<p><b>Адрес / ПВЗ:</b> {o.delivery_address}</p>}<p><b>Оплата:</b> {o.payment_type==='cash'?'Наличными':'Переводом'}</p>{o.customer_email&&<p><b>Email:</b> {o.customer_email}</p>}{o.comment&&<p><b>Комментарий:</b> {o.comment}</p>}<a className="admin-wa-button" href={`https://wa.me/${String(o.customer_phone||'').replace(/\D/g,'')}`} target="_blank" rel="noreferrer"><MessageCircle/>Написать покупателю</a></div></div>}</article>)}</div>}</main>{form&&<ProductForm item={edit} categories={categories} onSave={save} onCancel={()=>{setForm(false);setEdit(null)}}/>}</div>
 }
 
 function App(){

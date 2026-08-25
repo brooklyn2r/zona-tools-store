@@ -91,3 +91,15 @@ export async function createOrder(payload) {
     body: JSON.stringify(payload),
   });
 }
+
+export async function getAdminOrders() {
+  return request('/api/admin/orders', { headers: authHeaders() });
+}
+
+export async function updateOrderStatus(id, status) {
+  return request(`/api/admin/orders/${id}/status`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({ status }),
+  });
+}
