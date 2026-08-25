@@ -104,10 +104,13 @@ export async function updateOrderStatus(id, status) {
   });
 }
 
-export async function getAdminCategories() {
+export async function getAdminCategories(){
   return request('/api/admin/categories',{headers:authHeaders()});
 }
-
-export async function editCategory(id,payload) {
-  return request(`/api/admin/categories/${id}`,{method:'PATCH',headers:authHeaders(),body:JSON.stringify(payload)});
+export async function editCategory(id,payload){
+  return request(`/api/admin/categories/${id}`,{
+    method:'PATCH',
+    headers:authHeaders(),
+    body:JSON.stringify(payload),
+  });
 }

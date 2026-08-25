@@ -85,7 +85,7 @@ async function ensureCategorySchema() {
     alter table categories add column if not exists sync_source text not null default 'digit';
     alter table categories add column if not exists is_active boolean not null default true;
     alter table categories add column if not exists updated_at timestamptz not null default now();
-    create index if not exists idx_categories_active_sort on categories(is_active, sort_order, name);
+    create index if not exists idx_categories_active_sort on categories(is_active,sort_order,name);
   `);
 }
 
@@ -268,7 +268,7 @@ function normalizeDigitProduct(raw) {
     unit: String(raw?.unit || 'шт').trim() || 'шт',
     spec: String(raw?.spec || raw?.short_spec || '').trim(),
     specs,
-    is_active: raw?.is_active === false ? false : true
+    is_active: true
   };
 }
 
@@ -476,14 +476,14 @@ app.post('/api/digit/sync', requireDigitApiKey, async (req, res) => {
               unit=$7,
               spec=$8,
               specs=$9::jsonb,
-              is_active=$10,
+              is_active=true,
               sync_source='digit',
               last_synced_at=now(),
               updated_at=now()
-            where digit_product_id=$11
+            where digit_product_id=$10
           `, [
             p.title, p.brand, p.category, p.price, p.old_price, p.stock,
-            p.unit, p.spec, JSON.stringify(p.specs || {}), p.is_active, p.digit_product_id
+            p.unit, p.spec, JSON.stringify(p.specs || {}), p.digit_product_id
           ]);
           updated++;
         } else {
@@ -492,10 +492,10 @@ app.post('/api/digit/sync', requireDigitApiKey, async (req, res) => {
           await client.query(`
             insert into products
             (title,slug,category,brand,spec,price,old_price,badge,stock,description,image_url,rating,reviews,is_active,is_featured,specs,images,digit_product_id,sync_source,last_synced_at,sync_enabled,unit)
-            values ($1,$2,$3,$4,$5,$6,$7,'',$8,'','',5,0,$9,false,$10::jsonb,'[]'::jsonb,$11,'digit',now(),true,$12)
+            values ($1,$2,$3,$4,$5,$6,$7,'',$8,'','',5,0,true,false,$9::jsonb,'[]'::jsonb,$10,'digit',now(),true,$11)
           `, [
             p.title, slug, p.category, p.brand, p.spec, p.price, p.old_price,
-            p.stock, p.is_active, JSON.stringify(p.specs || {}), p.digit_product_id, p.unit
+            p.stock, JSON.stringify(p.specs || {}), p.digit_product_id, p.unit
           ]);
           created++;
         }
@@ -659,18 +659,16 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
-app.get('/api/categories', async (_, res) => {
-  try {
-    const { rows } = await query(`
+app.get('/api/categories', async (_,res)=>{
+  try{
+    const {rows}=await query(`
       select id,name,slug,sort_order,image_url,sync_source,is_active,updated_at
       from categories
       where is_active=true
-      order by sort_order, name
+      order by sort_order asc,name asc
     `);
     res.json(rows);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  }catch(e){res.status(500).json({error:e.message});}
 });
 
 app.post('/api/admin/login', async (req, res) => {
@@ -713,27 +711,26 @@ app.post('/api/admin/upload', requireAdmin, upload.single('image'), async (req, 
   }
 });
 
-app.get('/api/admin/categories', requireAdmin, async (_, res) => {
-  try {
-    const { rows } = await query(`
+
+app.get('/api/admin/categories', requireAdmin, async (_,res)=>{
+  try{
+    const {rows}=await query(`
       select id,name,slug,sort_order,image_url,sync_source,is_active,updated_at
       from categories
-      order by is_active desc, sort_order, name
+      order by is_active desc,sort_order asc,name asc
     `);
     res.json(rows);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  }catch(e){res.status(500).json({error:e.message});}
 });
 
-app.patch('/api/admin/categories/:id', requireAdmin, async (req, res) => {
-  try {
+app.patch('/api/admin/categories/:id', requireAdmin, async (req,res)=>{
+  try{
     const id=Number(req.params.id);
     if(!Number.isFinite(id)) return res.status(400).json({error:'Некорректный ID категории'});
     const imageUrl=String(req.body?.image_url||'').trim();
     const sortOrder=Number(req.body?.sort_order??0);
     const isActive=req.body?.is_active!==false;
-    const { rows }=await query(`
+    const {rows}=await query(`
       update categories
       set image_url=$1,sort_order=$2,is_active=$3,updated_at=now()
       where id=$4
@@ -741,9 +738,7 @@ app.patch('/api/admin/categories/:id', requireAdmin, async (req, res) => {
     `,[imageUrl||null,Number.isFinite(sortOrder)?sortOrder:0,isActive,id]);
     if(!rows.length) return res.status(404).json({error:'Категория не найдена'});
     res.json(rows[0]);
-  } catch(e) {
-    res.status(500).json({error:e.message});
-  }
+  }catch(e){res.status(500).json({error:e.message});}
 });
 
 app.post('/api/admin/products', requireAdmin, async (req, res) => {
@@ -927,10 +922,10 @@ app.use((err, req, res, next) => {
 
 ensureBaseSchema()
   .then(() => Promise.all([
+    ensureCategorySchema(),
     ensureOrderSchema(),
     ensureProductSpecsSchema(),
     ensureProductImagesSchema(),
-    ensureCategorySchema(),
     ensureDigitSyncSchema()
   ]))
   .then(() => ensureInitialAdmin())

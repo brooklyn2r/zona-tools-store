@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import './styles.css';
 import './stage7.css';
-import { getProducts, getCategories, adminLogin, addProduct, editProduct, removeProduct, uploadImage, createOrder, getAdminOrders, updateOrderStatus, getAdminCategories, editCategory } from './api';
+import {getProducts, getCategories, adminLogin, addProduct, editProduct, removeProduct, uploadImage, createOrder, getAdminOrders, updateOrderStatus , getAdminCategories, editCategory} from './api';
 
 const rub=n=>new Intl.NumberFormat('ru-RU').format(Number(n||0))+' ₽';
 const STORE={address:'г. Хасавюрт, ул. Бамовская, 74',phones:[
@@ -634,18 +634,25 @@ function ProductForm({item,categories,onSave,onCancel}){
               </div></div></div><div className="form-actions"><button type="button" className="ghost" onClick={onCancel}>Отмена</button><button className="primary"><Save/>Сохранить</button></div></form></div>
 }
 
+
 function CategoryForm({item,onSave,onCancel}){
   const [f,setF]=React.useState({image_url:item?.image_url||'',sort_order:Number(item?.sort_order||0),is_active:item?.is_active!==false});
   const [uploading,setUploading]=React.useState(false);
-  const upload=async e=>{const file=e.target.files?.[0];if(!file)return;setUploading(true);try{const url=await uploadImage(file);setF(x=>({...x,image_url:url}))}catch(err){alert(err.message)}finally{setUploading(false)}};
+  const upload=async e=>{
+    const file=e.target.files?.[0];if(!file)return;
+    setUploading(true);
+    try{const url=await uploadImage(file);setF(x=>({...x,image_url:url}))}
+    catch(err){alert(err.message)}
+    finally{setUploading(false)}
+  };
   return <div className="modal-bg"><form className="category-form glass" onSubmit={e=>{e.preventDefault();onSave(f)}}>
     <div className="form-head"><div><span className="eyebrow">КАТЕГОРИЯ ИЗ DIGIT</span><h2>{item.name}</h2></div><button type="button" className="icon-btn" onClick={onCancel}><X/></button></div>
-    <p className="category-source-note">Название и состав категорий приходят из DIGIT УЧЁТ. На сайте меняются только картинка, порядок и видимость.</p>
+    <p className="category-source-note">Название и сама категория приходят из DIGIT УЧЁТ. Здесь меняются только изображение, порядок и видимость на сайте.</p>
     <div className="category-preview"><img src={f.image_url||categoryIcons[item.name]||'/tool-drill.svg'}/><b>{item.name}</b></div>
     <label>Изображение категории<input value={f.image_url} onChange={e=>setF(x=>({...x,image_url:e.target.value}))} placeholder="URL или загрузите файл"/></label>
     <label className="upload-btn"><Upload/>{uploading?'Загрузка...':'Загрузить изображение'}<input type="file" accept="image/*" onChange={upload}/></label>
     <label>Порядок показа<input type="number" value={f.sort_order} onChange={e=>setF(x=>({...x,sort_order:Number(e.target.value)}))}/></label>
-    <label className="category-active"><input type="checkbox" checked={f.is_active} onChange={e=>setF(x=>({...x,is_active:e.target.checked}))}/> Показывать категорию на сайте</label>
+    <label className="category-active"><input type="checkbox" checked={f.is_active} onChange={e=>setF(x=>({...x,is_active:e.target.checked}))}/> Показывать на сайте</label>
     <div className="form-actions"><button type="button" className="ghost" onClick={onCancel}>Отмена</button><button className="primary"><Save/>Сохранить</button></div>
   </form></div>
 }

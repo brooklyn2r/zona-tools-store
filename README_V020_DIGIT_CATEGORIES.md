@@ -1,5 +1,6 @@
 ZONA v0.20
-- DIGIT УЧЁТ is the source of category names and structure.
-- Full sync creates/reactivates categories and hides categories missing from DIGIT.
-- Category image and sort order are preserved.
-- Admin > Категории: image, order, visibility.
+- DIGIT УЧЁТ is the source of category names/structure.
+- Full sync creates/reactivates categories and hides removed DIGIT categories.
+- Category image and sort_order are preserved.
+- Admin > Категории lets you upload/change image, order and visibility.
+- Category names are intentionally not editable on website; edit them in DIGIT.
