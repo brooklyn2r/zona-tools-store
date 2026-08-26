@@ -1013,3 +1013,20 @@ button:disabled.disabled-buy{
 .admin-category-image img{width:100%;height:100%;object-fit:contain;padding:6px}.admin-category-info{display:flex;flex-direction:column;gap:5px;min-width:0}.admin-category-info b{font-size:13px}.admin-category-info small{font-size:9px;color:#849096}.cat-status{font-size:9px;color:#ff8585}.cat-status.on{color:#79df91}
 .category-form{width:min(520px,calc(100% - 20px));max-height:92vh;overflow:auto;padding:20px;border-radius:20px}.category-source-note{font-size:11px;color:#929ca1;line-height:1.45}.category-preview{height:130px;border:1px solid rgba(255,255,255,.08);border-radius:14px;display:flex;align-items:center;gap:18px;padding:12px;margin:12px 0}.category-preview img{width:120px;height:100px;object-fit:contain}.category-preview b{font-size:18px}.category-form label{display:flex;flex-direction:column;gap:6px;margin-top:10px;font-size:10px}.category-active{flex-direction:row!important;align-items:center!important}
 @media(max-width:760px){.admin-categories-grid{grid-template-columns:1fr!important}.admin-category-card{grid-template-columns:68px 1fr 34px!important;padding:9px!important}.admin-category-image{height:58px!important}.category-form{padding:14px!important}}
+
+
+/* v0.23 footer logo + single contact polish */
+.final-footer>div:first-child>img{
+  width:auto!important;
+  height:64px!important;
+  max-width:190px!important;
+  object-fit:contain!important;
+  object-position:left center!important;
+  display:block!important;
+  margin:0 0 12px 0!important;
+}
+.final-footer>div:first-child{min-width:0}
+.footer-contacts a{white-space:nowrap}
+@media(max-width:900px) and (min-width:761px){
+  .final-footer>div:first-child>img{height:56px!important;max-width:165px!important}
+}

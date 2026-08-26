@@ -11,13 +11,9 @@ import {getProducts, getCategories, adminLogin, addProduct, editProduct, removeP
 
 const rub=n=>new Intl.NumberFormat('ru-RU').format(Number(n||0))+' ₽';
 const STORE={address:'г. Хасавюрт, ул. Бамовская, 74',phones:[
-{display:'+7 922 258-13-13',href:'tel:+79222581313'},
-{display:'+7 922 920-03-03',href:'tel:+79229200303'},
-{display:'+7 928 567-45-88',href:'tel:+79285674588'}],
-whatsapp:'79229200303',
-instagram:[
-{label:'@zona_instrumenty',href:'https://www.instagram.com/zona_instrumenty/'},
-{label:'@zona.instrumentov',href:'https://www.instagram.com/zona.instrumentov/'}],
+{display:'+7 922 258-13-13',href:'tel:+79222581313'}],
+whatsapp:'79222581313',
+instagram:[{label:'@zona.instrumentov',href:'https://www.instagram.com/zona.instrumentov/'}],
 mapQuery:'Хасавюрт, улица Бамовская, 74'};
 const DELIVERY_OPTIONS=[
 {id:'pickup',title:'Самовывоз',desc:'Хасавюрт, ул. Бамовская, 74',icon:'store'},
@@ -233,7 +229,7 @@ function CommerceHeader({page,setPage,query,setQuery,cartCount,openCart,favCount
     <div className="commerce-topbar">
       <button className="topbar-location" onClick={goHomeContacts}><MapPin size={14}/> {STORE.address}</button>
       <nav><button onClick={()=>setPage('home')}>Магазин</button><button onClick={()=>setPage('delivery')}>Доставка и оплата</button><button onClick={goHomeContacts}>Контакты</button></nav>
-      <div className="commerce-phone"><Phone size={14}/><a href={STORE.phones[1].href}>{STORE.phones[1].display}</a></div>
+      <div className="commerce-phone"><Phone size={14}/><a href={STORE.phones[0].href}>{STORE.phones[0].display}</a></div>
     </div>
     <header className="commerce-header glass">
       <button className="commerce-logo" onClick={()=>setPage('home')}><img src="/zona-logo.png"/></button>
@@ -263,7 +259,7 @@ function HomePage({products,categories,setPage,setQuery,open,add,favs,toggleFav,
         </div>
         <div className="hero-tool-art">
           <div className="hero-circle"></div>
-          <img src="/tool-drill.svg"/>
+          <img src="/hero-fengbao.png"/>
           <div className="hero-float h1">18V</div>
           <div className="hero-float h2">60 Нм</div>
           <div className="hero-float h3">2 АКБ</div>
