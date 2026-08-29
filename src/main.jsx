@@ -432,6 +432,15 @@ function ProductPage({selected,products,open,add,favs,toggleFav,compare,toggleCo
           <div className="secondary-actions"><button className={fav?'active':''} onClick={()=>toggleFav(selected.id)}><Heart fill={fav?'currentColor':'none'}/> В избранное</button><button className={cmp?'active':''} onClick={()=>toggleCompare(selected.id)}><Scale/> Сравнить</button></div>
         </div>
         <div className="purchase-services"><div><Truck/><span><b>Доставка</b><small>Сегодня / завтра</small></span></div><div><StoreIcon/><span><b>Самовывоз</b><small>Из магазина</small></span></div><div><ShieldCheck/><span><b>Гарантия</b><small>12 месяцев</small></span></div></div>
+        <section className="product-description glass desktop-product-specs">
+          <div className="tab-title"><Gauge/><h2>Характеристики</h2></div>
+          <div className="spec-table">
+            <div><span>Бренд</span><b>{selected.brand||'ZONA'}</b></div>
+            <div><span>Категория</span><b>{selected.category}</b></div>
+            {config.map(cfg=><div key={cfg.key}><span>{cfg.label}</span><b>{displaySpecValue(inferred[cfg.key],cfg)}</b></div>)}
+            <div><span>Остаток</span><b>{selected.stock} шт.</b></div>
+          </div>
+        </section>
       </div>
     </div>
 
@@ -440,7 +449,7 @@ function ProductPage({selected,products,open,add,favs,toggleFav,compare,toggleCo
         <div className="tab-title"><Info/><h2>Описание</h2></div>
         <p>{selected.description||'Описание товара будет добавлено администратором.'}</p>
       </section>
-      <section className="product-description glass">
+      <section className="product-description glass mobile-product-specs">
         <div className="tab-title"><Gauge/><h2>Характеристики</h2></div>
         <div className="spec-table">
           <div><span>Бренд</span><b>{selected.brand||'ZONA'}</b></div>
